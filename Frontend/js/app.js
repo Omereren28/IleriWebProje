@@ -14,6 +14,8 @@ import { renderAboutPage } from './pages/aboutPage.js';
 import { renderContactPage } from './pages/contactPage.js';
 import { renderLoginPage } from './pages/loginPage.js';
 import { renderRegisterPage } from './pages/registerPage.js';
+import { renderForgotPasswordPage } from './pages/forgotPasswordPage.js';
+import { renderAdminPage } from './pages/adminPage.js';
 import { initTheme } from './utils/storage.js';
 
 function init() {
@@ -35,6 +37,8 @@ function init() {
   addRoute('/iletisim', renderContactPage);
   addRoute('/giris', renderLoginPage);
   addRoute('/uye-ol', renderRegisterPage);
+  addRoute('/sifremi-unuttum', renderForgotPasswordPage);
+  addRoute('/admin', renderAdminPage);
 
   // Start router
   initRouter();

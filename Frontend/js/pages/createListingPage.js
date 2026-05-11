@@ -1,11 +1,20 @@
 /**
- * HomeOfEmlak — Create Listing Page
+ * HomeOfEmlak — Create Listing Page (API Entegreli)
  */
 import { showToast } from '../components/toast.js';
 import { categories, cities } from '../data.js';
 import { saveDraft, getDraft, clearDraft } from '../utils/storage.js';
+import * as API from '../services/api.js';
+import { navigate } from '../router.js';
 
 export function renderCreateListingPage(container) {
+  // Giriş kontrolü
+  if (!API.isLoggedIn()) {
+    showToast('İlan vermek için giriş yapmalısınız', 'warning');
+    navigate('/giris');
+    return;
+  }
+
   let currentStep = 1;
   const totalSteps = 4;
   const draft = getDraft() || {};
@@ -18,7 +27,6 @@ export function renderCreateListingPage(container) {
             <h1 class="heading-2">📝 İlan Ver</h1>
             <p class="text-body">Gayrimenkulünüzü kolayca ilan edin</p>
           </div>
-
           <div class="progress-steps">
             ${[1,2,3,4].map((s, i) => `
               ${i > 0 ? '<div class="progress-step__line"></div>' : ''}
@@ -28,12 +36,10 @@ export function renderCreateListingPage(container) {
               </div>
             `).join('')}
           </div>
-
           <div class="form-card" id="step-content"></div>
         </div>
       </div>
     `;
-
     renderStep();
   }
 
@@ -60,10 +66,7 @@ export function renderCreateListingPage(container) {
         <div class="form-group"><label>m² (Brüt)</label><input id="f-sqmg" type="number" value="${draft.sqmGross||''}"></div>
         <div class="form-group"><label>m² (Net)</label><input id="f-sqmn" type="number" value="${draft.sqmNet||''}"></div>
       </div>
-      <div class="form-actions">
-        <div></div>
-        <button class="btn btn--primary" id="next-btn">Devam →</button>
-      </div>
+      <div class="form-actions"><div></div><button class="btn btn--primary" id="next-btn">Devam →</button></div>
     `;
     el.querySelector('#next-btn').addEventListener('click', () => {
       draft.type = el.querySelector('#f-type').value;
@@ -73,7 +76,7 @@ export function renderCreateListingPage(container) {
       draft.sqmGross = el.querySelector('#f-sqmg').value;
       draft.sqmNet = el.querySelector('#f-sqmn').value;
       if (!draft.price) { showToast('Lütfen fiyat giriniz', 'warning'); return; }
-      saveDraft(draft); currentStep = 2; renderStep();
+      saveDraft(draft); currentStep = 2; render();
     });
   }
 
@@ -92,13 +95,14 @@ export function renderCreateListingPage(container) {
         <button class="btn btn--primary" id="next-btn">Devam →</button>
       </div>
     `;
-    el.querySelector('#prev-btn').addEventListener('click', () => { currentStep = 1; renderStep(); });
+    el.querySelector('#prev-btn').addEventListener('click', () => { currentStep = 1; render(); });
     el.querySelector('#next-btn').addEventListener('click', () => {
       draft.city = el.querySelector('#f-city').value;
       draft.district = el.querySelector('#f-district').value;
       draft.neighborhood = el.querySelector('#f-neigh').value;
       draft.address = el.querySelector('#f-addr').value;
-      saveDraft(draft); currentStep = 3; renderStep();
+      if (!draft.city || !draft.district) { showToast('Şehir ve ilçe zorunludur', 'warning'); return; }
+      saveDraft(draft); currentStep = 3; render();
     });
   }
 
@@ -125,14 +129,14 @@ export function renderCreateListingPage(container) {
         <button class="btn btn--primary" id="next-btn">Devam →</button>
       </div>
     `;
-    el.querySelector('#prev-btn').addEventListener('click', () => { currentStep = 2; renderStep(); });
+    el.querySelector('#prev-btn').addEventListener('click', () => { currentStep = 2; render(); });
     el.querySelector('#next-btn').addEventListener('click', () => {
       draft.buildingAge = el.querySelector('#f-age').value;
       draft.floor = el.querySelector('#f-floor').value;
       draft.bathrooms = el.querySelector('#f-bath').value;
       draft.heating = el.querySelector('#f-heat').value;
       draft.extras = [...el.querySelectorAll('input[type=checkbox]:checked')].map(c => c.value);
-      saveDraft(draft); currentStep = 4; renderStep();
+      saveDraft(draft); currentStep = 4; render();
     });
   }
 
@@ -152,16 +156,42 @@ export function renderCreateListingPage(container) {
         <button class="btn btn--accent btn--lg" id="publish-btn">🚀 Yayınla</button>
       </div>
     `;
-    el.querySelector('#prev-btn').addEventListener('click', () => { currentStep = 3; renderStep(); });
-    el.querySelector('#publish-btn').addEventListener('click', () => {
+    el.querySelector('#prev-btn').addEventListener('click', () => { currentStep = 3; render(); });
+    el.querySelector('#publish-btn').addEventListener('click', async () => {
       draft.title = el.querySelector('#f-title').value;
       draft.description = el.querySelector('#f-desc').value;
       draft.ownerName = el.querySelector('#f-name').value;
       draft.ownerPhone = el.querySelector('#f-phone').value;
       if (!draft.title) { showToast('Lütfen başlık giriniz', 'warning'); return; }
-      clearDraft();
-      showToast('İlanınız başarıyla yayınlandı! 🎉', 'success', 5000);
-      window.location.hash = '#/ilanlar';
+
+      const btn = el.querySelector('#publish-btn');
+      btn.disabled = true;
+      btn.textContent = 'Yayınlanıyor...';
+
+      try {
+        const extras = draft.extras || [];
+        const propertyData = {
+          title: draft.title, type: draft.type || 'sale', category: draft.category || 'apartment',
+          price: Number(draft.price), city: draft.city, district: draft.district,
+          neighborhood: draft.neighborhood, address: draft.address,
+          rooms: draft.rooms, sqmGross: Number(draft.sqmGross) || 0, sqmNet: Number(draft.sqmNet) || 0,
+          floor: Number(draft.floor) || 0, buildingAge: Number(draft.buildingAge) || 0,
+          bathrooms: Number(draft.bathrooms) || 0, heating: draft.heating || 'dogalgaz',
+          balcony: extras.includes('Balkon'), elevator: extras.includes('Asansör'),
+          parking: extras.includes('Otopark'), pool: extras.includes('Havuz'),
+          security: extras.includes('Güvenlik'), furnished: extras.includes('Eşyalı'),
+          description: draft.description, ownerName: draft.ownerName, ownerPhone: draft.ownerPhone,
+          images: []
+        };
+        await API.createProperty(propertyData);
+        clearDraft();
+        showToast('İlanınız başarıyla yayınlandı! 🎉', 'success', 5000);
+        navigate('/ilanlar');
+      } catch (error) {
+        showToast(error.message || 'İlan yayınlanamadı', 'error');
+        btn.disabled = false;
+        btn.textContent = '🚀 Yayınla';
+      }
     });
   }
 

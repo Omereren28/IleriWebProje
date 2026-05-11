@@ -1,14 +1,24 @@
 /**
- * HomeOfEmlak — Home Page
+ * HomeOfEmlak — Home Page (API Entegreli)
  */
-import { getFeaturedProperties, getLatestProperties, categories, stats, testimonials, cities } from '../data.js';
+import { categories, stats, testimonials, cities } from '../data.js';
+import * as API from '../services/api.js';
 import { createPropertyCard } from '../components/propertyCard.js';
 import { setupScrollReveal, animateCounter } from '../utils/helpers.js';
 import { navigate } from '../router.js';
 
-export function renderHomePage(container) {
-  const featured = getFeaturedProperties();
-  const latest = getLatestProperties(6);
+export async function renderHomePage(container) {
+  // API'den verileri çek, hata olursa boş dizi kullan
+  let featured = [];
+  let latest = [];
+  try {
+    const featuredRes = await API.getFeaturedProperties();
+    featured = featuredRes.data?.properties || [];
+  } catch (e) { console.warn('Featured API error, using fallback'); }
+  try {
+    const latestRes = await API.getLatestProperties(6);
+    latest = latestRes.data?.properties || [];
+  } catch (e) { console.warn('Latest API error, using fallback'); }
 
   container.innerHTML = `
     <!-- HERO -->

@@ -1,16 +1,16 @@
 /**
- * HomeOfEmlak — Header Component
+ * HomeOfEmlak — Header Component (API Entegreli)
  */
 import { toggleTheme, getTheme } from '../utils/storage.js';
 import { getCompareList } from '../utils/storage.js';
+import { getUser, isLoggedIn, logout } from '../services/api.js';
 
 export function renderHeader() {
   const header = document.getElementById('site-header');
   const theme = getTheme();
   const compareCount = getCompareList().length;
 
-  const userStr = localStorage.getItem('emlak_user');
-  const user = userStr ? JSON.parse(userStr) : null;
+  const user = getUser();
 
   header.innerHTML = `
     <nav class="navbar" id="navbar">
@@ -30,8 +30,16 @@ export function renderHeader() {
 
         <div class="navbar__actions">
           ${user ? `
-            <div style="display:flex;align-items:center;gap:8px;margin-right:8px;cursor:pointer" onclick="localStorage.removeItem('emlak_user');window.location.reload()" title="Çıkış Yap">
-              <div style="width:32px;height:32px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">${user.name.charAt(0).toUpperCase()}</div>
+            <div class="user-menu" style="display:flex;align-items:center;gap:8px;margin-right:8px;position:relative">
+              <div class="user-avatar" id="user-avatar-btn" style="width:32px;height:32px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;cursor:pointer" title="${user.firstName} ${user.lastName}">${user.firstName.charAt(0).toUpperCase()}</div>
+              <div class="user-dropdown" id="user-dropdown" style="display:none;position:absolute;top:100%;right:0;margin-top:8px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:8px;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:100">
+                <div style="padding:8px 12px;border-bottom:1px solid var(--border);margin-bottom:4px">
+                  <p style="font-weight:600;font-size:14px;color:var(--text-primary)">${user.firstName} ${user.lastName}</p>
+                  <p style="font-size:12px;color:var(--text-muted)">${user.email}</p>
+                </div>
+                ${user.role === 'admin' ? '<a href="#/admin" class="dropdown-item" style="display:block;padding:8px 12px;border-radius:6px;font-size:13px;color:var(--text-primary);text-decoration:none">⚙️ Admin Panel</a>' : ''}
+                <button id="logout-btn" class="dropdown-item" style="display:block;width:100%;padding:8px 12px;border-radius:6px;font-size:13px;color:var(--danger);text-align:left;background:none;border:none;cursor:pointer">🚪 Çıkış Yap</button>
+              </div>
             </div>
           ` : `
             <a href="#/giris" class="btn btn--primary btn--sm" style="margin-right:8px;padding:6px 12px">Giriş Yap</a>
@@ -81,12 +89,10 @@ export function renderHeader() {
 
 function setupHeaderEvents(header) {
   // Scroll effect
-  let lastScroll = 0;
   window.addEventListener('scroll', () => {
     const navbar = document.getElementById('navbar');
     if (!navbar) return;
-    const scrolled = window.scrollY > 20;
-    navbar.classList.toggle('navbar--scrolled', scrolled);
+    navbar.classList.toggle('navbar--scrolled', window.scrollY > 20);
   });
 
   // Theme toggle
@@ -94,7 +100,28 @@ function setupHeaderEvents(header) {
   if (themeBtn) {
     themeBtn.addEventListener('click', () => {
       toggleTheme();
-      renderHeader(); // Re-render to update icon
+      renderHeader();
+    });
+  }
+
+  // User dropdown
+  const avatarBtn = document.getElementById('user-avatar-btn');
+  const dropdown = document.getElementById('user-dropdown');
+  if (avatarBtn && dropdown) {
+    avatarBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+    });
+    document.addEventListener('click', () => { if (dropdown) dropdown.style.display = 'none'; });
+  }
+
+  // Logout
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      logout();
+      renderHeader();
+      window.location.hash = '#/';
     });
   }
 
@@ -120,13 +147,11 @@ function setupHeaderEvents(header) {
   if (hamburger) hamburger.addEventListener('click', openMobile);
   if (mobileOverlay) mobileOverlay.addEventListener('click', closeMobile);
   if (mobileClose) mobileClose.addEventListener('click', closeMobile);
-
-  // Close mobile on link click
   mobileMenu?.querySelectorAll('.mobile-link').forEach(link => {
     link.addEventListener('click', closeMobile);
   });
 
-  // Update compare badge on change
+  // Update compare badge
   window.addEventListener('compare-changed', () => {
     const badge = header.querySelector('.nav-action--compare .nav-badge');
     const count = getCompareList().length;
@@ -144,8 +169,6 @@ function setupHeaderEvents(header) {
     }
   });
 
-  // Update header when user logs in/out
-  window.addEventListener('user-login', () => {
-    renderHeader();
-  });
+  // Update header on login/logout
+  window.addEventListener('user-login', () => { renderHeader(); });
 }
