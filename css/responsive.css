@@ -1,0 +1,26 @@
+/* HomeOfEmlak — Responsive Styles */
+/* Additional responsive overrides */
+
+@media (max-width: 1200px) {
+  .container { padding: 0 var(--space-5); }
+}
+
+@media (max-width: 992px) {
+  .section { padding: var(--space-16) 0; }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --header-height: 64px;
+  }
+  .section { padding: var(--space-12) 0; }
+  .section__title { font-size: var(--text-3xl); }
+  .property-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 576px) {
+  .container { padding: 0 var(--space-4); }
+  .section { padding: var(--space-10) 0; }
+  .heading-1 { font-size: clamp(1.75rem, 7vw, 2.5rem); }
+  .heading-2 { font-size: clamp(1.5rem, 5vw, 2rem); }
+}
