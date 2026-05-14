@@ -207,6 +207,7 @@
 .detail-page__thumbs {
   display: grid;
   grid-template-rows: 1fr 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: var(--space-2);
 }
 

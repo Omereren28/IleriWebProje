@@ -16,8 +16,9 @@ export function renderCreateListingPage(container) {
   }
 
   let currentStep = 1;
-  const totalSteps = 4;
+  const totalSteps = 5;
   const draft = getDraft() || {};
+  let selectedFiles = []; // Yüklenen dosyaları tutar
 
   function render() {
     container.innerHTML = `
@@ -28,11 +29,11 @@ export function renderCreateListingPage(container) {
             <p class="text-body">Gayrimenkulünüzü kolayca ilan edin</p>
           </div>
           <div class="progress-steps">
-            ${[1,2,3,4].map((s, i) => `
+            ${[1,2,3,4,5].map((s, i) => `
               ${i > 0 ? '<div class="progress-step__line"></div>' : ''}
               <div class="progress-step ${s < currentStep ? 'progress-step--completed' : ''} ${s === currentStep ? 'progress-step--active' : ''}">
                 <div class="progress-step__circle">${s < currentStep ? '✓' : s}</div>
-                <span class="progress-step__label">${['Bilgiler', 'Konum', 'Özellikler', 'Açıklama'][i]}</span>
+                <span class="progress-step__label">${['Bilgiler', 'Konum', 'Özellikler', 'Fotoğraflar', 'Açıklama'][i]}</span>
               </div>
             `).join('')}
           </div>
@@ -45,7 +46,7 @@ export function renderCreateListingPage(container) {
 
   function renderStep() {
     const stepEl = container.querySelector('#step-content');
-    const steps = [renderStep1, renderStep2, renderStep3, renderStep4];
+    const steps = [renderStep1, renderStep2, renderStep3, renderStep4, renderStep5];
     steps[currentStep - 1](stepEl);
   }
 
@@ -142,6 +143,115 @@ export function renderCreateListingPage(container) {
 
   function renderStep4(el) {
     el.innerHTML = `
+      <h3 class="heading-3" style="margin-bottom:var(--space-6)">Fotoğraflar</h3>
+      
+      <div class="upload-area" id="upload-area">
+        <div class="upload-area__content">
+          <div style="font-size: 2.5rem; margin-bottom: 1rem;">📸</div>
+          <p>Fotoğrafları buraya sürükleyin veya</p>
+          <label class="btn btn--outline" style="margin-top: var(--space-3); cursor: pointer;">
+            Dosya Seçin
+            <input type="file" id="file-input" multiple accept="image/jpeg, image/png, image/webp" style="display: none;">
+          </label>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: var(--space-2);">Maksimum 10 fotoğraf (JPEG, PNG, WebP)</p>
+        </div>
+      </div>
+      
+      <div class="image-preview-grid" id="image-preview-grid"></div>
+
+      <div class="form-actions">
+        <button class="btn btn--ghost" id="prev-btn">← Geri</button>
+        <button class="btn btn--primary" id="next-btn">Devam →</button>
+      </div>
+    `;
+
+    const uploadArea = el.querySelector('#upload-area');
+    const fileInput = el.querySelector('#file-input');
+    const previewGrid = el.querySelector('#image-preview-grid');
+    
+    // Önceden seçilmiş fotoğrafları göster
+    updatePreview();
+
+    // Sürükle bırak olayları
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.classList.add('upload-area--dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.classList.remove('upload-area--dragover');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('upload-area--dragover');
+      handleFiles(e.dataTransfer.files);
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      handleFiles(e.target.files);
+    });
+
+    function handleFiles(files) {
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+      let added = 0;
+
+      for (let i = 0; i < files.length; i++) {
+        if (selectedFiles.length >= 10) {
+          showToast('En fazla 10 fotoğraf yükleyebilirsiniz.', 'warning');
+          break;
+        }
+
+        if (allowedTypes.includes(files[i].type)) {
+          selectedFiles.push(files[i]);
+          added++;
+        } else {
+          showToast(`${files[i].name} desteklenmeyen format.`, 'error');
+        }
+      }
+
+      if (added > 0) {
+        updatePreview();
+      }
+    }
+
+    function updatePreview() {
+      previewGrid.innerHTML = '';
+      
+      selectedFiles.forEach((file, index) => {
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+          const item = document.createElement('div');
+          item.className = 'image-preview-item';
+          if(index === 0) item.classList.add('image-preview-item--main');
+          
+          item.innerHTML = `
+            <img src="${e.target.result}" alt="Önizleme">
+            ${index === 0 ? '<div class="image-preview-item__badge">Kapak</div>' : ''}
+            <button class="image-preview-item__remove" data-index="${index}">✕</button>
+          `;
+          
+          item.querySelector('.image-preview-item__remove').addEventListener('click', () => {
+            selectedFiles.splice(index, 1);
+            updatePreview();
+          });
+          
+          previewGrid.appendChild(item);
+        };
+        
+        reader.readAsDataURL(file);
+      });
+    }
+
+    el.querySelector('#prev-btn').addEventListener('click', () => { currentStep = 3; render(); });
+    el.querySelector('#next-btn').addEventListener('click', () => {
+      currentStep = 5; render();
+    });
+  }
+
+  function renderStep5(el) {
+    el.innerHTML = `
       <h3 class="heading-3" style="margin-bottom:var(--space-6)">İlan Başlığı & Açıklama</h3>
       <div class="form-group"><label>İlan Başlığı</label><input id="f-title" value="${draft.title||''}" placeholder="Ör: Kadıköy'de Deniz Manzaralı 3+1 Daire"></div>
       <div class="form-group"><label>Açıklama</label><textarea id="f-desc" rows="8" placeholder="İlanınızın detaylı açıklamasını yazın...">${draft.description||''}</textarea></div>
@@ -151,24 +261,68 @@ export function renderCreateListingPage(container) {
           <input id="f-phone" placeholder="Telefon" value="${draft.ownerPhone||''}">
         </div>
       </div>
+      
+      <div id="upload-progress-container" style="display:none; margin-top: var(--space-4);">
+        <p style="font-size: var(--text-sm); margin-bottom: 4px; font-weight: 600;" id="upload-status-text">Fotoğraflar yükleniyor...</p>
+        <div style="width: 100%; height: 8px; background: var(--bg-section); border-radius: 4px; overflow: hidden;">
+          <div id="upload-progress-bar" style="height: 100%; width: 0%; background: var(--primary); transition: width 0.3s;"></div>
+        </div>
+      </div>
+
       <div class="form-actions">
         <button class="btn btn--ghost" id="prev-btn">← Geri</button>
         <button class="btn btn--accent btn--lg" id="publish-btn">🚀 Yayınla</button>
       </div>
     `;
-    el.querySelector('#prev-btn').addEventListener('click', () => { currentStep = 3; render(); });
+    el.querySelector('#prev-btn').addEventListener('click', () => { currentStep = 4; render(); });
+    
     el.querySelector('#publish-btn').addEventListener('click', async () => {
       draft.title = el.querySelector('#f-title').value;
       draft.description = el.querySelector('#f-desc').value;
       draft.ownerName = el.querySelector('#f-name').value;
       draft.ownerPhone = el.querySelector('#f-phone').value;
+      
       if (!draft.title) { showToast('Lütfen başlık giriniz', 'warning'); return; }
 
       const btn = el.querySelector('#publish-btn');
+      const progressContainer = el.querySelector('#upload-progress-container');
+      const progressBar = el.querySelector('#upload-progress-bar');
+      const statusText = el.querySelector('#upload-status-text');
+      
       btn.disabled = true;
       btn.textContent = 'Yayınlanıyor...';
 
       try {
+        let imageUrls = [];
+        
+        // Fotoğrafları yükle
+        if (selectedFiles.length > 0) {
+          progressContainer.style.display = 'block';
+          
+          try {
+            // Animasyon için sahte progress
+            let progress = 10;
+            progressBar.style.width = '10%';
+            const progressInterval = setInterval(() => {
+              progress = Math.min(progress + 10, 85);
+              progressBar.style.width = `${progress}%`;
+            }, 300);
+
+            const uploadRes = await API.uploadMultipleImages(selectedFiles);
+            
+            clearInterval(progressInterval);
+            progressBar.style.width = '100%';
+            statusText.textContent = 'Fotoğraflar yüklendi, ilan oluşturuluyor...';
+            
+            if (uploadRes.success && uploadRes.data && uploadRes.data.images) {
+              imageUrls = uploadRes.data.images.map(img => img.url);
+            }
+          } catch (uploadErr) {
+            console.error('Upload failed:', uploadErr);
+            showToast('Fotoğraflar yüklenirken bir hata oluştu, ancak ilanınız fotoğraflarsız yayınlanacak.', 'warning');
+          }
+        }
+
         const extras = draft.extras || [];
         const propertyData = {
           title: draft.title, type: draft.type || 'sale', category: draft.category || 'apartment',
@@ -181,8 +335,9 @@ export function renderCreateListingPage(container) {
           parking: extras.includes('Otopark'), pool: extras.includes('Havuz'),
           security: extras.includes('Güvenlik'), furnished: extras.includes('Eşyalı'),
           description: draft.description, ownerName: draft.ownerName, ownerPhone: draft.ownerPhone,
-          images: []
+          images: imageUrls
         };
+        
         await API.createProperty(propertyData);
         clearDraft();
         showToast('İlanınız başarıyla yayınlandı! 🎉', 'success', 5000);
@@ -191,6 +346,7 @@ export function renderCreateListingPage(container) {
         showToast(error.message || 'İlan yayınlanamadı', 'error');
         btn.disabled = false;
         btn.textContent = '🚀 Yayınla';
+        progressContainer.style.display = 'none';
       }
     });
   }

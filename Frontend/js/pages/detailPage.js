@@ -47,9 +47,15 @@ export async function renderDetailPage(container, params) {
         <div class="detail-page__gallery" id="gallery">
           <img src="${property.images[0] || ''}" alt="${property.title}" class="detail-page__main-img" data-index="0" />
           <div class="detail-page__thumbs">
-            ${property.images.slice(1, 3).map((img, i) =>
-              `<img src="${img}" alt="${property.title}" class="detail-page__thumb" data-index="${i + 1}" />`
-            ).join('')}
+            ${property.images.slice(1, 5).map((img, i) => {
+              const isLast = i === 3 && property.images.length > 5;
+              return `
+                <div class="detail-page__thumb-wrapper" style="position: relative; cursor: pointer;">
+                  <img src="${img}" alt="${property.title}" class="detail-page__thumb" data-index="${i + 1}" style="width: 100%; height: 100%; object-fit: cover;" />
+                  ${isLast ? `<div class="detail-page__thumb-overlay" data-index="4" style="position: absolute; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.2rem;">+${property.images.length - 5} Daha</div>` : ''}
+                </div>
+              `;
+            }).join('')}
           </div>
         </div>
 

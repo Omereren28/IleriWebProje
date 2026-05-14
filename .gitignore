@@ -29,3 +29,6 @@ dist-ssr
 # Uploads
 uploads/*
 !uploads/.gitkeep
+
+# SSH/PEM keys (güvenlik)
+*.pem

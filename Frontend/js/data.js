@@ -261,12 +261,12 @@ export const cities = [
 ];
 
 export const categories = [
-  { key: 'apartment', label: 'Konut', icon: '🏢', count: 6 },
-  { key: 'villa', label: 'Villa', icon: '🏡', count: 4 },
-  { key: 'land', label: 'Arsa', icon: '🌿', count: 2 },
-  { key: 'commercial', label: 'İş Yeri', icon: '🏪', count: 1 },
-  { key: 'summer', label: 'Yazlık', icon: '🏖️', count: 1 },
-  { key: 'project', label: 'Projeler', icon: '🏗️', count: 1 },
+  { key: 'apartment', label: 'Konut', icon: '🏢', count: 8 },
+  { key: 'villa', label: 'Villa', icon: '🏡', count: 5 },
+  { key: 'land', label: 'Arsa', icon: '🌿', count: 4 },
+  { key: 'commercial', label: 'İş Yeri', icon: '🏪', count: 4 },
+  { key: 'summer', label: 'Yazlık', icon: '🏖️', count: 4 },
+  { key: 'project', label: 'Projeler', icon: '🏗️', count: 3 },
 ];
 
 export const stats = [
